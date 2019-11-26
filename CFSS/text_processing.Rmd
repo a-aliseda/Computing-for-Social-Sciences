@@ -1,0 +1,89 @@
+---
+title: 'Class Notes: Text processing'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(acs)
+library(tidytext)
+library(here)
+
+
+```
+
+## Excercise States in Songs
+
+```{r states}
+
+# Data frames for 
+pop_df <- read_csv("http://cfss.uchicago.edu/data/pop2016.csv")
+song_lyrics <- read_csv("http://cfss.uchicago.edu/data/billboard_lyrics_1964-2015.csv")
+
+# Tidy the data frame with unigrams and bi-grams to capture name of states with one or two words
+tidy_songs <- bind_rows(song_lyrics %>% 
+                          unnest_tokens(output = state_name,
+                                        input = Lyrics),
+                        song_lyrics %>% 
+                          unnest_tokens(output = state_name, input = Lyrics, token = "ngrams", n=2))
+  
+# Join the songs data frame with the names of the states
+
+tidy_songs <- inner_join(tidy_songs, pop_df) %>% 
+  distinct(Rank, Artist, Year, state_name, .keep_all = TRUE)
+
+# Count the times each state is on the lyrics
+(state_counts <- tidy_songs %>% 
+   count(state_name) %>% 
+   arrange(desc(n)))
+
+```
+
+## Harry Potter
+
+```{r harry_potter}
+
+devtools::install_github("bradleyboehmke/harrypotter")
+
+library(harrypotter)
+
+hp_books <- c("philosophers_stone", "chamber_of_secrets",
+              "prisoner_of_azkaban", "goblet_of_fire",
+              "order_of_the_phoenix", "half_blood_prince",
+              "deathly_hallows")
+
+# combine books into a list
+hp_words <- list(
+  philosophers_stone,
+  chamber_of_secrets,
+  prisoner_of_azkaban,
+  goblet_of_fire,
+  order_of_the_phoenix,
+  half_blood_prince,
+  deathly_hallows
+) %>%
+  # name each list element
+  set_names(hp_books) %>%
+  # convert each book to a data frame and merge into a single data frame
+  map_df(as_tibble, .id = "book") %>%
+  # convert book to a factor
+  mutate(book = factor(book, levels = hp_books)) %>%
+  # remove empty chapters
+  drop_na(value) %>%
+  # create a chapter id column
+  group_by(book) %>%
+  mutate(chapter = row_number(book)) %>%
+  # tokenize the data frame
+  unnest_tokens(word, value)
+
+hp_words
+
+
+# sentiment analysis
+
+
+
+```
+
